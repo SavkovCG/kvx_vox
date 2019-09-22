@@ -6,6 +6,7 @@ import argparse
 import struct
 import array
 import os
+import pathlib
 
 
 MAGICAVOXEL_VOX_FILE_VERSION = 150
@@ -91,11 +92,17 @@ def main():
     CLI Entry point
     :return:
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('source', help='Source .KVX file')
-    parser.add_argument('target', help='Target .VOX file')
+    parser = argparse.ArgumentParser(
+        description='Converts .kvx (SLAB6) to .vox (MagicaVoxel) files'
+    )
+    parser.add_argument('input', help='Input .kvx file')
+    parser.add_argument('--output', help='Output .kvx file (changes suffix by default)', default=None)
     args = parser.parse_args()
-    kvx_to_vox(args.source, args.target)
+    source = args.input
+    target = args.output
+    if target is None:
+        target = pathlib.Path(source).with_suffix('.vox')
+    kvx_to_vox(source, target)
 
 
 if __name__ == '__main__':

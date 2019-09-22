@@ -48,7 +48,6 @@ def kvx_to_vox(kvx_filename, vox_filename):
     vox_size_chunk = b'SIZE' + struct.pack('5L', 12, 0, xsiz, ysiz, zsiz)
     num_voxels = 0
     xyzi = array.array('B')
-    z_range = set()
     for x in range(xsiz):
         for y in range(ysiz):
             b_ptr = xoffset[x] + xyoffset[x][y] - ground_zero
@@ -66,9 +65,10 @@ def kvx_to_vox(kvx_filename, vox_filename):
                     for dz, i in enumerate(voxels):
                         xyzi.append(x)
                         xyzi.append(y)
-                        z_range.add(zsiz-(ztop+dz))
                         xyzi.append(zsiz-(ztop+dz))
-                        xyzi.append(i)
+                        assert i < 255
+                        xyzi.append(i + 1)
+
                         num_voxels += 1
     xyzi_size = (num_voxels*4 + 4)
     p_file.write(b'MAIN' + struct.pack('2L', 0, xyzi_size + 12 + 12 + 12 + 12 + 1024))
@@ -76,12 +76,13 @@ def kvx_to_vox(kvx_filename, vox_filename):
     p_file.write(b'XYZI' + struct.pack('3L', xyzi_size, 0, num_voxels))
     xyzi.tofile(p_file)
     p_file.write(b'RGBA' + struct.pack('2L', 1024, 0))
-    for i in range(256):
+    for i in range(255):
         r = int(vga_pal[i * 3] * 255 / 63)
         g = int(vga_pal[i * 3 + 1] * 255 / 63)
         b = int(vga_pal[i * 3 + 2] * 255 / 63)
         a = 255
         p_file.write(struct.pack('4B', r, g, b, a))
+    p_file.write(struct.pack('4B', 255, 255, 255, 255))
     p_file.close()
 
 

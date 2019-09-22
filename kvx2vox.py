@@ -5,6 +5,10 @@ CLI to convert SLAB6 .kvx to MagicaVoxel .vox
 import argparse
 import struct
 import array
+import os
+
+
+MAGICAVOXEL_VOX_FILE_VERSION = 150
 
 
 def kvx_to_vox(kvx_filename, vox_filename):
@@ -31,12 +35,15 @@ def kvx_to_vox(kvx_filename, vox_filename):
     # Sanity check
     assert xoffset[0] == (xsiz + 1) * 4 + xsiz * (ysiz + 1) * 2
     ground_zero = xoffset[0]
-    # TO DO: Load palette
+    p_file.seek(-256*3, os.SEEK_END)
+    vga_pal = array.array('B')
+    vga_pal.fromfile(p_file, 256*3)
+
     p_file.close()
 
     p_file = open(vox_filename, 'wb')
     p_file.write(b'VOX ')
-    p_file.write(struct.pack('L', 150))
+    p_file.write(struct.pack('L', MAGICAVOXEL_VOX_FILE_VERSION))
 
     vox_size_chunk = b'SIZE' + struct.pack('5L', 12, 0, xsiz, ysiz, zsiz)
     num_voxels = 0
@@ -63,11 +70,18 @@ def kvx_to_vox(kvx_filename, vox_filename):
                         xyzi.append(zsiz-(ztop+dz))
                         xyzi.append(i)
                         num_voxels += 1
-
-    p_file.write(b'MAIN' + struct.pack('2L', 0, (num_voxels*4 + 4) + 12 + 12 + 12))
+    xyzi_size = (num_voxels*4 + 4)
+    p_file.write(b'MAIN' + struct.pack('2L', 0, xyzi_size + 12 + 12 + 12 + 12 + 1024))
     p_file.write(vox_size_chunk)
-    p_file.write(b'XYZI' + struct.pack('3L', (num_voxels*4 + 4), 0, num_voxels))
+    p_file.write(b'XYZI' + struct.pack('3L', xyzi_size, 0, num_voxels))
     xyzi.tofile(p_file)
+    p_file.write(b'RGBA' + struct.pack('2L', 1024, 0))
+    for i in range(256):
+        r = int(vga_pal[i * 3] * 255 / 63)
+        g = int(vga_pal[i * 3 + 1] * 255 / 63)
+        b = int(vga_pal[i * 3 + 2] * 255 / 63)
+        a = 255
+        p_file.write(struct.pack('4B', r, g, b, a))
     p_file.close()
 
 
